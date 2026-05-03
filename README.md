@@ -140,7 +140,7 @@ dotnet workload install wasm-tools
 ## Screenshot
 
 <img width="1521" height="712" alt="immagine" src="https://github.com/user-attachments/assets/59d8780b-f4a0-42a4-8c99-bf138cfe851c" />
-
+---
 <img width="1521" height="707" alt="immagine" src="https://github.com/user-attachments/assets/60c6878a-90fc-47b2-bd81-08128451b35b" />
 
 ---
