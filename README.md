@@ -18,6 +18,8 @@ There is **no backend, no SaaS telemetry, no cloud database** — only static as
 IndexedDB blob          OPFS (/miniWms/database.sqlite)
 ```
 
+<img width="1518" height="892" alt="immagine" src="https://github.com/user-attachments/assets/89bbd921-227e-43b2-b660-7e2932834133" />
+
 ---
 
 ## Highlights
