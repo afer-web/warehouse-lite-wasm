@@ -4,7 +4,7 @@
 ![SQLite WASM](https://img.shields.io/badge/SQLite%20WASM-4D4D4D?style=for-the-badge&logo=sqlite&logoColor=white)
 ![Serverless](https://img.shields.io/badge/Serverless-000000?style=for-the-badge&logo=vercel&logoColor=white)
 
-# MiniWMS.Wasm — Industrial lite-WMS running fully in the browser
+# Warehouse Lite WASM
 
 MiniWMS is a **minimal, production-minded warehouse reference app** packaged as a **standalone Blazor WebAssembly** experience backed by **SQLite WASM (sql.js)**.  
 There is **no backend, no SaaS telemetry, no cloud database** — only static assets, optional OPFS snapshots, IndexedDB failover, and `localStorage` preferences.
