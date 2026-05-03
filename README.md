@@ -1,9 +1,8 @@
 ![C#](https://img.shields.io/badge/C%23-239120?style=for-the-badge&logo=csharp&logoColor=white)
 ![.NET 8](https://img.shields.io/badge/.NET%208-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
-![Blazor WebAssembly](https://img.shields.io/badge/Blazor%20WASM-512BD4?style=for-the-badge&logo=blazor&logoColor=white)
-![SQLite WASM](https://img.shields.io/badge/SQLite%20WASM-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
+![Blazor WebAssembly](https://img.shields.io/badge/Blazor%20WASM-CC0000?style=for-the-badge&logo=blazor&logoColor=white)
+![SQLite WASM](https://img.shields.io/badge/SQLite%20WASM-4D4D4D?style=for-the-badge&logo=sqlite&logoColor=white)
 ![Serverless](https://img.shields.io/badge/Serverless-000000?style=for-the-badge&logo=vercel&logoColor=white)
-![Client Side Only](https://img.shields.io/badge/Client--Side%20Only-1E90FF?style=for-the-badge)
 
 # MiniWMS.Wasm — Industrial lite-WMS running fully in the browser
 
