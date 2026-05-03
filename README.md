@@ -7,6 +7,9 @@
 # Warehouse Lite WASM
 
 MiniWMS is a **minimal, production-minded warehouse reference app** packaged as a **standalone Blazor WebAssembly** experience backed by **SQLite WASM (sql.js)**.  
+
+<img width="1518" height="892" alt="immagine" src="https://github.com/user-attachments/assets/89bbd921-227e-43b2-b660-7e2932834133" />
+
 There is **no backend, no SaaS telemetry, no cloud database** — only static assets, optional OPFS snapshots, IndexedDB failover, and `localStorage` preferences.
 
 ```
@@ -17,8 +20,6 @@ There is **no backend, no SaaS telemetry, no cloud database** — only static as
          v                     v
 IndexedDB blob          OPFS (/miniWms/database.sqlite)
 ```
-
-<img width="1518" height="892" alt="immagine" src="https://github.com/user-attachments/assets/89bbd921-227e-43b2-b660-7e2932834133" />
 
 ---
 
@@ -140,7 +141,9 @@ dotnet workload install wasm-tools
 ## Screenshot
 
 <img width="1521" height="712" alt="immagine" src="https://github.com/user-attachments/assets/59d8780b-f4a0-42a4-8c99-bf138cfe851c" />
+
 ---
+
 <img width="1521" height="707" alt="immagine" src="https://github.com/user-attachments/assets/60c6878a-90fc-47b2-bd81-08128451b35b" />
 
 ---
