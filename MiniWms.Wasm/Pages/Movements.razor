@@ -1,0 +1,194 @@
+@page "/movements"
+@inject MovementService MovementService
+@inject ItemService ItemService
+@inject LocationService LocationService
+
+<PageTitle>MiniWMS · Movements</PageTitle>
+
+<div class="page-toolbar">
+    <div>
+        <p class="eyebrow neon">LEDGER</p>
+        <h2 style="margin:0;">Loads &amp; unloads</h2>
+    </div>
+    <button class="btn btn--neon" type="button" @onclick="OpenComposer">Register movement</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="banner banner--danger">@_error</div>
+}
+
+<IndustrialModal @bind-Visible="_composer" Eyebrow="Movement composer" Title="New movement">
+    <EditForm Model="_movementDraft" OnSubmit="RecordAsync">
+        <div class="form-grid">
+            <div>
+                <label>Item</label>
+                <InputSelect TValue="long?" @bind-Value="_movementDraft.ItemId">
+                    <option value="">Select…</option>
+                    @foreach (var item in _items)
+                    {
+                        <option value="@item.Id">@($"{item.Code} · {item.Description}")</option>
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <label>Location</label>
+                <InputSelect TValue="long?" @bind-Value="_movementDraft.LocationId">
+                    <option value="">Select…</option>
+                    @foreach (var loc in _locations)
+                    {
+                        <option value="@loc.Id">@($"{loc.Code} · {loc.Area}")</option>
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <label>Quantity (&gt; 0)</label>
+                <InputNumber Min="0.000001"
+                             TValue="double"
+                             Step="0.001"
+                             @bind-Value="_movementDraft.Quantity" />
+            </div>
+            <div>
+                <label>Movement type</label>
+                <InputSelect TValue="int" @bind-Value="_movementDraft.TypeCode">
+                    <option value="0">Load</option>
+                    <option value="1">Unload</option>
+                </InputSelect>
+            </div>
+            <small class="muted">SQLite trigger keeps <code>Stocks</code> aligned; unloads reject negative on-hand totals.</small>
+        </div>
+        <div class="flex-row" style="margin-top:1rem;justify-content:flex-end;">
+            <button type="button" class="btn btn--ghost" @onclick="() => _composer = false">Close</button>
+            <button type="submit" class="btn btn--neon">Persist</button>
+        </div>
+    </EditForm>
+</IndustrialModal>
+
+<DataTablePlaceholder>
+    @if (_ledger.Count == 0)
+    {
+        <div class="banner banner--muted">No ledger rows captured.</div>
+    }
+    else
+    {
+        <table class="industrial-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Time</th>
+                    <th>Item</th>
+                    <th>Location</th>
+                    <th>Type</th>
+                    <th>Qty</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var mv in _ledger)
+                {
+                    <tr>
+                        <td>@mv.Id</td>
+                        <td>@FormatTimestamp(mv.Timestamp)</td>
+                        <td>@mv.ItemCode</td>
+                        <td>@mv.LocationCode</td>
+                        <td><span class="pill-status @(mv.Type == MovementType.Load ? "load" : "unload")">@MovementFormatting.ToLabel(mv.Type)</span></td>
+                        <td>@mv.Quantity.ToString("0.###")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</DataTablePlaceholder>
+
+@code {
+    sealed class ComposerModel
+    {
+        public int TypeCode { get; set; }
+        public double Quantity { get; set; } = 1d;
+        public long? ItemId { get; set; }
+        public long? LocationId { get; set; }
+    }
+
+    readonly List<Item> _items = [];
+    readonly List<Location> _locations = [];
+    readonly List<MovementListRow> _ledger = [];
+    ComposerModel _movementDraft = new();
+    bool _composer;
+    string? _error;
+
+    protected override async Task OnInitializedAsync() => await ReloadCachesAsync().ConfigureAwait(false);
+
+    async Task ReloadCachesAsync()
+    {
+        try
+        {
+            _error = null;
+            var itemsTask = ItemService.GetAllAsync();
+            var locTask = LocationService.GetAllAsync();
+            var ledgerTask = MovementService.GetLedgerSliceAsync(400);
+
+            await Task.WhenAll(itemsTask, locTask, ledgerTask).ConfigureAwait(false);
+
+            _items.Clear();
+            _locations.Clear();
+            _ledger.Clear();
+
+            _items.AddRange(await itemsTask.ConfigureAwait(false));
+            _locations.AddRange(await locTask.ConfigureAwait(false));
+            _ledger.AddRange(await ledgerTask.ConfigureAwait(false));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    void OpenComposer()
+    {
+        _movementDraft = new ComposerModel();
+        _composer = true;
+    }
+
+    async Task RecordAsync(EditContext _)
+    {
+        try
+        {
+            if (_movementDraft.ItemId is null || _movementDraft.LocationId is null)
+            {
+                _error = "Select both an item and a location.";
+                return;
+            }
+
+            if (_movementDraft.TypeCode is not (0 or 1))
+            {
+                _error = "Movement type is not valid.";
+                return;
+            }
+
+            var movementType = _movementDraft.TypeCode == 0 ? MovementType.Load : MovementType.Unload;
+            await MovementService
+                .RecordMovementAsync(
+                    _movementDraft.ItemId.Value,
+                    _movementDraft.LocationId.Value,
+                    _movementDraft.Quantity,
+                    movementType)
+                .ConfigureAwait(false);
+            await ReloadCachesAsync().ConfigureAwait(false);
+            _composer = false;
+            _movementDraft = new ComposerModel();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    static string FormatTimestamp(string raw)
+    {
+        var ok = DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var ts);
+        return ok ? ts.ToLocalTime().ToString("g") : raw;
+    }
+}

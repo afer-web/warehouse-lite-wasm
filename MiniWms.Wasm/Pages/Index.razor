@@ -1,0 +1,41 @@
+@page "/"
+
+<PageTitle>MiniWMS · Overview</PageTitle>
+
+<section class="content-panel">
+    <p class="eyebrow muted">Facility overview</p>
+    <h1>Digital twin for lean warehouse teams</h1>
+    <p class="muted" style="max-width:760px;line-height:1.6;margin-top:.75rem;">
+        MiniWMS is a fully offline <strong>SQLite WASM</strong> control tower. SKUs, bin locations,
+        movements, KPIs — without cloud dependencies. Persistence layers on OPFS snapshots with an
+        IndexedDB mirror for resilient recovery.
+    </p>
+
+    <div class="spacer-xs"></div>
+    <div class="hero-grid">
+        <IndustrialCard Eyebrow="Console" Title="Operational cockpit">
+            <p>Analyze KPIs, stock ladders, ledger velocity from the dashboard lane.</p>
+            <NavLink href="/dashboard" class="btn btn--neon">Open cockpit</NavLink>
+        </IndustrialCard>
+        <IndustrialCard Eyebrow="Warehouse" Title="Operational tools">
+            <ul class="muted" style="padding-left:1.05rem;display:grid;gap:.45rem;line-height:1.5;">
+                <li>SKU masterfile CRUD pipeline</li>
+                <li>Bin policy &amp; area segmentation</li>
+                <li>Load / unload validations</li>
+                <li>Inventory grid with alternating rows</li>
+            </ul>
+            <NavLink href="/inventory" class="btn btn--ghost">Inventory grid</NavLink>
+        </IndustrialCard>
+        <IndustrialCard Eyebrow="Tech" Title="SQLite WASM telemetry">
+            <p class="ascii-chart">
+<pre>
+┌───────┬─────────────────────────┐
+│ OPFS    │ SQLite snapshot       │
+│ IDB mirror │ disaster fallback   │
+└───────┴─────────────────────────┘
+</pre>
+            </p>
+            <small class="muted">sql.js emits sqlite-wasm.wasm binaries — keep assets local.</small>
+        </IndustrialCard>
+    </div>
+</section>

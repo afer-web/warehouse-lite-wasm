@@ -1,0 +1,65 @@
+@page "/inventory"
+@inject InventoryService InventoryService
+
+<PageTitle>MiniWMS · Inventory</PageTitle>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="banner banner--danger">@_error</div>
+}
+
+<section class="content-panel">
+    <p class="eyebrow neon">Stock</p>
+    <h2>Inventory by bin</h2>
+    <p class="muted">
+        Showing non-zero aggregates only (<code>Stocks</code> table updated through movement trigger).
+    </p>
+</section>
+
+<DataTablePlaceholder>
+    @if (_balances.Count == 0)
+    {
+        <div class="banner banner--muted">No positive on-hand balances yet.</div>
+    }
+    else
+    {
+        <table class="industrial-table">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>Bin</th>
+                    <th>Qty</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _balances)
+                {
+                    <tr>
+                        <td>@row.ItemCode</td>
+                        <td>@row.LocationCode</td>
+                        <td>@row.Quantity.ToString("0.###")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</DataTablePlaceholder>
+
+@code {
+    readonly List<StockBalance> _balances = [];
+    string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var balances = await InventoryService.GetBalancesAsync().ConfigureAwait(false);
+            _balances.Clear();
+            _balances.AddRange(balances.OrderByDescending(b => b.Quantity));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+}

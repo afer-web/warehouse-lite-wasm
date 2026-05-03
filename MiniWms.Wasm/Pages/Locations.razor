@@ -1,0 +1,180 @@
+@page "/locations"
+@inject LocationService LocationService
+@inject IJSRuntime Js
+
+<PageTitle>MiniWMS · Locations</PageTitle>
+
+<div class="page-toolbar">
+    <div>
+        <p class="eyebrow neon">GEO</p>
+        <h2 style="margin:0;">Locations</h2>
+    </div>
+    <button class="btn btn--neon" type="button" disabled="@_busy" @onclick="CreateAsync">
+        New location
+    </button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="banner banner--danger">@_error</div>
+}
+
+<DataTablePlaceholder>
+    @if (_rows.Count == 0)
+    {
+        <div class="banner banner--muted">Locations not provisioned.</div>
+    }
+    else
+    {
+        <table class="industrial-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Area</th>
+                    <th>Description</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var loc in _rows)
+                {
+                    <tr>
+                        <td>@loc.Code</td>
+                        <td>@loc.Area</td>
+                        <td>@loc.Description</td>
+                        <td class="flex-row">
+                            <button class="btn btn--ghost" type="button" @onclick="@(() => Edit(loc))">Edit</button>
+                            <button class="btn btn--danger" type="button" @onclick="@(() => DeleteAsync(loc))">Remove</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</DataTablePlaceholder>
+
+<IndustrialModal @bind-Visible="_modal" Eyebrow="Location profile" Title="@(_draft.Id == 0 ? "New bin" : "Edit bin")">
+    <EditForm Model="_draft" OnSubmit="SubmitAsync">
+        <div class="form-grid">
+            <div>
+                <label>Code</label>
+                <InputText @bind-Value="_draft.Code" maxlength="48" />
+            </div>
+            <div>
+                <label>Area</label>
+                <InputText @bind-Value="_draft.Area" maxlength="48" />
+            </div>
+            <div>
+                <label>Description</label>
+                <InputTextArea @bind-Value="_draft.Description" Rows="3" maxlength="640" />
+            </div>
+        </div>
+
+        <div class="flex-row" style="margin-top:1rem;justify-content:flex-end;">
+            <button type="button" class="btn btn--ghost" @onclick="Cancel">Cancel</button>
+            <button type="submit" class="btn btn--neon">Commit</button>
+        </div>
+    </EditForm>
+</IndustrialModal>
+
+@code {
+    readonly List<Location> _rows = [];
+    bool _busy;
+    string? _error;
+    bool _modal;
+    LocationDraft _draft = new();
+
+    protected override Task OnInitializedAsync() => ReloadAsync();
+
+    async Task ReloadAsync()
+    {
+        try
+        {
+            _busy = true;
+            _error = null;
+            var data = await LocationService.GetAllAsync().ConfigureAwait(false);
+            _rows.Clear();
+            _rows.AddRange(data);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+            StateHasChanged();
+        }
+
+        await Task.CompletedTask;
+    }
+
+    void CreateAsync()
+    {
+        _draft = new LocationDraft();
+        _modal = true;
+    }
+
+    void Edit(Location row)
+    {
+        _draft = new LocationDraft
+        {
+            Id = row.Id,
+            Code = row.Code,
+            Area = row.Area,
+            Description = row.Description,
+        };
+        _modal = true;
+    }
+
+    void Cancel() => _modal = false;
+
+    async Task SubmitAsync(EditContext _)
+    {
+        if (string.IsNullOrWhiteSpace(_draft.Code) ||
+            string.IsNullOrWhiteSpace(_draft.Area) ||
+            string.IsNullOrWhiteSpace(_draft.Description))
+        {
+            _error = "Fill all fields.";
+            return;
+        }
+
+        try
+        {
+            await LocationService.UpsertAsync(_draft.AsModel()).ConfigureAwait(false);
+            _modal = false;
+            await ReloadAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    async Task DeleteAsync(Location row)
+    {
+        try
+        {
+            var confirmed = await Js.InvokeAsync<bool>("miniWmsUi.confirm", $"Delete location {row.Code}?")
+                .ConfigureAwait(false);
+            if (!confirmed) return;
+
+            await LocationService.DeleteAsync(row.Id).ConfigureAwait(false);
+            await ReloadAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    sealed class LocationDraft
+    {
+        public long Id { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public string Area { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+
+        public Location AsModel() => new(Id, Code.Trim(), Area.Trim(), Description.Trim());
+    }
+}

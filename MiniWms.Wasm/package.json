@@ -1,0 +1,12 @@
+{
+  "name": "miniwms-wasm-sqlite-assets",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Copies sql.js artifacts into wwwroot/sqlite for offline MiniWMS builds.",
+  "scripts": {
+    "postinstall": "node tools/copy-sqlite.mjs"
+  },
+  "dependencies": {
+    "sql.js": "1.11.0"
+  }
+}

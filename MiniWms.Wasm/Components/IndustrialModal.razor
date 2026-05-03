@@ -1,0 +1,46 @@
+@if (Visible)
+{
+    <section class="mw-modal-host" aria-modal="true" role="dialog">
+        <div class="mw-modal-backdrop" @onclick="BackdropAsync"></div>
+        <article class="mw-modal-panel neon-border">
+            <header class="mw-modal__header">
+                <div>
+                    <p class="eyebrow neon">@Eyebrow</p>
+                    <h2>@Title</h2>
+                </div>
+                <button class="mw-icon-btn" type="button" aria-label="Close dialog" @onclick="CloseAsync">
+                    &times;
+                </button>
+            </header>
+            <div class="mw-modal__body">
+                @ChildContent
+            </div>
+        </article>
+    </section>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter] public string Title { get; set; } = "Dialog";
+
+    [Parameter] public string Eyebrow { get; set; } = "Action";
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public bool CloseOnBackdrop { get; set; } = true;
+
+    Task CloseAsync() => VisibleChanged.InvokeAsync(false);
+
+    async Task BackdropAsync()
+    {
+        if (!CloseOnBackdrop)
+        {
+            return;
+        }
+
+        await CloseAsync();
+    }
+}

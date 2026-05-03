@@ -1,0 +1,24 @@
+<section class="industrial-card @(Dense ? "industrial-card--dense" : null)">
+    <header class="industrial-card__header">
+        <div>
+            <p class="eyebrow muted">@Eyebrow</p>
+            <h3>@Title</h3>
+        </div>
+        @Trailing
+    </header>
+    <div class="industrial-card__body">
+        @ChildContent
+    </div>
+</section>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Insight";
+
+    [Parameter] public string Eyebrow { get; set; } = string.Empty;
+
+    [Parameter] public RenderFragment? Trailing { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public bool Dense { get; set; }
+}

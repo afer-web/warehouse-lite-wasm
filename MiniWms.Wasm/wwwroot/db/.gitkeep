@@ -1,0 +1,3 @@
+# Runtime database bytes are materialized by the browser (OPFS / IndexedDB).
+# This folder documents the logical filename `miniwms.db` mentioned in the brief;
+# the physical snapshot is stored at OPFS path `miniWms/database.sqlite`.

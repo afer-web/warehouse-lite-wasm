@@ -1,0 +1,9 @@
+<div class="@($"industrial-scroll {CssClass}")">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string? CssClass { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MiniWMS · Industrial WASM</title>
+    <base href="./" />
+    <link rel="preconnect" href="./" />
+    <link rel="stylesheet" href="css/site.css" />
+</head>
+
+<body>
+    <div id="app">
+        <div class="boot-splash">
+            <div class="boot-grid"></div>
+            <p>Booting MiniWMS shell…</p>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui" class="blazor-error">
+        <div class="blazor-error__panel">
+            <strong>Runtime fault</strong>
+            <span>Blazor failed to start — check devtools console.</span>
+            <button class="btn btn--ghost" onclick="location.reload()">Reload</button>
+        </div>
+    </div>
+
+    <!-- sql.js must load before miniWmsDb bridge (exposes initSqlJs). -->
+    <script src="sqlite/sql-wasm.js"></script>
+    <script src="js/miniWmsPreferences.js"></script>
+    <script src="js/miniWmsDb.js"></script>
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>

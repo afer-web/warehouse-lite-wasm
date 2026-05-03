@@ -1,0 +1,166 @@
+@page "/dashboard"
+@inject ItemService ItemService
+@inject LocationService LocationService
+@inject MovementService MovementService
+@inject InventoryService InventoryService
+
+<PageTitle>MiniWMS · Dashboard</PageTitle>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="banner banner--danger">@_error</div>
+}
+
+<div class="industrial-grid">
+    <IndustrialCard Eyebrow="Articles" Title="Masterfile">
+        <div class="stat-value">@_itemCount.ToString("N0")</div>
+        <p class="stat-caption">SKU count currently registered</p>
+    </IndustrialCard>
+    <IndustrialCard Eyebrow="Locations" Title="Bins coverage">
+        <div class="stat-value">@_locCount.ToString("N0")</div>
+        <p class="stat-caption">Active locations / docks</p>
+    </IndustrialCard>
+    <IndustrialCard Eyebrow="Ledger" Title="Inventory mass">
+        <div class="stat-value">@_totalQtySnapshot.ToString("0.###")</div>
+        <p class="stat-caption">Summed qty across Stocks</p>
+        <small class="muted">Automatically aligned by SQL trigger.</small>
+    </IndustrialCard>
+</div>
+
+<IndustrialCard Eyebrow="Telemetry" Title="Recent movements">
+    <DataTablePlaceholder>
+        @if (_recentMovementRows.Count == 0)
+        {
+            <div class="banner banner--muted">No telemetry yet.</div>
+        }
+        else
+        {
+            <table class="industrial-table">
+                <thead>
+                    <tr>
+                        <th>When</th>
+                        <th>SKU</th>
+                        <th>Bin</th>
+                        <th>Qty</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _recentMovementRows)
+                    {
+                        <tr>
+                            <td>@ParseIso(row.Timestamp).ToLocalTime().ToString("g")</td>
+                            <td>@row.ItemCode</td>
+                            <td>@row.LocationCode</td>
+                            <td>@row.Quantity.ToString("0.###")</td>
+                            <td><span class="pill-status @(row.Type == MovementType.Load ? "load" : "unload")">@MovementFormatting.ToLabel(row.Type)</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </DataTablePlaceholder>
+</IndustrialCard>
+
+<IndustrialCard Eyebrow="Stocks · CSS chart" Title="Per-SKU ladders">
+    <p class="muted">Relative bars scale to SKU with greatest on-hand qty.</p>
+    @if (_aggregates.Count == 0)
+    {
+        <div class="banner banner--muted">No positive balances yet.</div>
+    }
+    else
+    {
+        <div class="bar-chart">
+            @foreach (var row in _aggregates)
+            {
+                <div class="bar-chart__row">
+                    <div class="bar-chart__label">
+                        <strong>@row.Sku</strong>
+                        <span>@row.TotalQty.ToString("0.###") units</span>
+                    </div>
+                    <div class="bar-shell">
+                        <div class="bar-fill" style="width:@Width(row.TotalQty)"></div>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="spacer-xs"></div>
+        <details>
+            <summary class="muted" style="cursor:pointer;">ASCII sparkline</summary>
+            <pre class="ascii-chart" style="margin-top:.85rem;color:var(--accent);">@_asciiTelemetry</pre>
+        </details>
+    }
+</IndustrialCard>
+
+@code {
+    readonly List<MovementListRow> _recentMovementRows = [];
+    readonly List<StockByItemAggregate> _aggregates = [];
+
+    DateTime ParseIso(string raw) =>
+        DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt)
+            ? dt
+            : DateTime.UtcNow;
+
+    double _upperBound = 1d;
+
+    double _totalQtySnapshot;
+    string _asciiTelemetry = string.Empty;
+
+    string Width(double qty) =>
+        _upperBound <= 0 ? "0%" : $"{Math.Round(qty / _upperBound * 100, 1)}%";
+
+    string? _error;
+    long _itemCount;
+    long _locCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var itemsTask = ItemService.GetAllAsync();
+            var locsTask = LocationService.GetAllAsync();
+            var movesTask = MovementService.GetLedgerSliceAsync(14);
+            var aggTask = InventoryService.AggregateByItemsAsync();
+
+            await Task.WhenAll(itemsTask, locsTask, movesTask, aggTask).ConfigureAwait(false);
+
+            _itemCount = (await itemsTask.ConfigureAwait(false)).Count;
+            _locCount = (await locsTask.ConfigureAwait(false)).Count;
+            var moves = await movesTask.ConfigureAwait(false);
+            var aggRows = await aggTask.ConfigureAwait(false);
+
+            _recentMovementRows.Clear();
+            _recentMovementRows.AddRange(moves.OrderByDescending(m => m.Timestamp).Take(8));
+
+            _aggregates.Clear();
+            _aggregates.AddRange(aggRows);
+            _upperBound = _aggregates.Count == 0 ? 1d : _aggregates.Max(a => Math.Max(a.TotalQty, 0));
+            _totalQtySnapshot = _aggregates.Sum(a => Math.Max(a.TotalQty, 0));
+            BuildAsciiTelemetry();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    void BuildAsciiTelemetry()
+    {
+        if (_aggregates.Count == 0)
+        {
+            _asciiTelemetry = string.Empty;
+            return;
+        }
+
+        var peak = Math.Max(_upperBound, double.Epsilon);
+        var sb = new StringBuilder();
+        foreach (var row in _aggregates.Take(8))
+        {
+            var pct = Math.Clamp(Math.Round(row.TotalQty / peak * 18), 0, 18);
+            sb.Append($"{row.Sku,-8}|");
+            sb.Append(new string('█', (int)pct)).AppendLine(new string('░', Math.Max(0, 18 - (int)pct)));
+        }
+
+        _asciiTelemetry = sb.ToString();
+    }
+}

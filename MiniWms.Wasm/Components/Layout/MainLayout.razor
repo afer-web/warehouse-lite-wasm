@@ -1,0 +1,63 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Navigation
+
+<div class="app-root theme-dark data-dark">
+    <aside class="sidebar">
+        <div class="sidebar__brand">
+            <span class="brand-mark">◇</span>
+            <div>
+                <strong>MiniWMS</strong>
+                <small>wasm edge</small>
+            </div>
+        </div>
+        <NavMenu />
+    </aside>
+
+    <section class="shell">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow muted">Industrial visibility</p>
+                <h1>@ResolveTitle()</h1>
+            </div>
+        </header>
+
+        <main id="mini-wms-body" class="content">
+            @Body
+        </main>
+    </section>
+</div>
+
+@code {
+    readonly Dictionary<string, string> _titles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["dashboard"] = "KPI cockpit",
+        ["items"] = "Article masterfile",
+        ["locations"] = "Warehouse locations",
+        ["movements"] = "Movements ledger",
+        ["inventory"] = "Cycle inventory grid",
+        [""] = "Facility overview",
+    };
+
+    string ResolveTitle()
+    {
+        var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var trimmed = relative.Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+        return _titles.TryGetValue(trimmed, out var header) ? header : "MiniWMS";
+    }
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    void OnLocationChanged(object? sender, LocationChangedEventArgs _)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

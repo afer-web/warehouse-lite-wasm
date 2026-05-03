@@ -1,0 +1,210 @@
+@page "/items"
+@inject ItemService ItemService
+@inject IJSRuntime Js
+
+<PageTitle>MiniWMS · Items</PageTitle>
+
+<div class="page-toolbar">
+    <div>
+        <p class="eyebrow neon">SKU</p>
+        <h2 style="margin:0;">Articles</h2>
+    </div>
+    <button class="btn btn--neon" type="button" disabled="@_busy" @onclick="CreateAsync">
+        New item
+    </button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="banner banner--danger">@_error</div>
+}
+
+<DataTablePlaceholder>
+    @if (_items.Count == 0)
+    {
+        <div class="banner banner--muted">Nothing registered yet.</div>
+    }
+    else
+    {
+        <table class="industrial-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Description</th>
+                    <th>UoM</th>
+                    <th>Created</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in _items)
+                {
+                    <tr>
+                        <td>@item.Code</td>
+                        <td>@item.Description</td>
+                        <td>@item.Unit</td>
+                        <td>@FormatDate(item.CreatedAt)</td>
+                        <td class="flex-row">
+                            <button class="btn btn--ghost" type="button" @onclick="@(()=>Edit(item))">
+                                Edit
+                            </button>
+                            <button class="btn btn--danger" type="button" @onclick="@(()=>DeleteAsync(item))">
+                                Remove
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</DataTablePlaceholder>
+
+<IndustrialModal @bind-Visible="_showModal" Title="@($"{(_draft.Id == 0 ? "New item" : "Edit item")}")" Eyebrow="CRUD shell">
+    <EditForm Model="_draft" OnSubmit="SubmitAsync">
+        <div class="form-grid">
+            <div>
+                <label>SKU</label>
+                <InputText @bind-Value="_draft.Code" maxlength="48" />
+            </div>
+            <div>
+                <label>Description</label>
+                <InputTextArea @bind-Value="_draft.Description" Rows="4" maxlength="640" />
+            </div>
+            <div>
+                <label>Unit of measure</label>
+                <InputText @bind-Value="_draft.Unit" maxlength="16" />
+            </div>
+        </div>
+
+        <div class="flex-row" style="margin-top:1rem;justify-content:flex-end;">
+            <button class="btn btn--ghost" type="button" @onclick="CancelModal">Discard</button>
+            <button class="btn btn--neon" type="submit">Save to local DB</button>
+        </div>
+    </EditForm>
+</IndustrialModal>
+
+@code {
+    readonly List<Item> _items = [];
+    ItemDraftForm _draft = new();
+    bool _busy;
+    string? _error;
+    bool _showModal;
+
+    protected override Task OnInitializedAsync() => ReloadAsync();
+
+    async Task ReloadAsync()
+    {
+        try
+        {
+            _busy = true;
+            _error = null;
+            var snapshot = await ItemService.GetAllAsync().ConfigureAwait(false);
+            _items.Clear();
+            _items.AddRange(snapshot);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+            StateHasChanged();
+        }
+
+        await Task.CompletedTask;
+    }
+
+    void CreateAsync()
+    {
+        _draft = new ItemDraftForm
+        {
+            CreatedAtUtc = DateTimeOffset.UtcNow,
+        };
+        _showModal = true;
+    }
+
+    void Edit(Item item)
+    {
+        _draft = new ItemDraftForm
+        {
+            Id = item.Id,
+            Code = item.Code,
+            Description = item.Description,
+            Unit = item.Unit,
+            CreatedAtUtc = DateTime.TryParse(item.CreatedAt, CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind, out var created)
+                    ? new DateTimeOffset(DateTime.SpecifyKind(created, DateTimeKind.Utc))
+                    : DateTimeOffset.UtcNow,
+        };
+        _showModal = true;
+    }
+
+    void CancelModal() => _showModal = false;
+
+    async Task SubmitAsync(EditContext _)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_draft.Code) ||
+                string.IsNullOrWhiteSpace(_draft.Description) ||
+                string.IsNullOrWhiteSpace(_draft.Unit))
+            {
+                _error = "SKU, description & unit fields are mandatory.";
+                return;
+            }
+
+            var record = _draft.AsRecord();
+            await ItemService.UpsertAsync(record).ConfigureAwait(false);
+            await ReloadAsync().ConfigureAwait(false);
+            _showModal = false;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    async Task DeleteAsync(Item item)
+    {
+        try
+        {
+            var confirmed = await Js.InvokeAsync<bool>("miniWmsUi.confirm", $"Delete SKU {item.Code}?").ConfigureAwait(false);
+            if (!confirmed)
+            {
+                return;
+            }
+
+            await ItemService.DeleteAsync(item.Id).ConfigureAwait(false);
+            await ReloadAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    string FormatDate(string raw) =>
+        DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt)
+            ? dt.ToLocalTime().ToString("g")
+            : raw;
+
+    sealed class ItemDraftForm
+    {
+        public long Id { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Unit { get; set; } = string.Empty;
+
+        /// <remarks>Captured at creation locally and frozen across edits.</remarks>
+        public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+
+        public Item AsRecord() =>
+            new(
+                Id,
+                Code.Trim(),
+                Description.Trim(),
+                Unit.Trim(),
+                CreatedAtUtc.ToString("O"));
+    }
+}
