@@ -137,14 +137,11 @@ dotnet workload install wasm-tools
 
 ---
 
-## Screenshot placeholders
+## Screenshot
 
-Planned visuals (capture after UI sign-off):
+<img width="1521" height="712" alt="immagine" src="https://github.com/user-attachments/assets/59d8780b-f4a0-42a4-8c99-bf138cfe851c" />
 
-1. **`docs/screens/dashboard.png`** — KPI console + ladders  
-2. **`docs/screens/inventory.png`** — alternating inventory grid  
-
-Until those files exist, treat this section as a stub for CI packaging.
+<img width="1521" height="707" alt="immagine" src="https://github.com/user-attachments/assets/60c6878a-90fc-47b2-bd81-08128451b35b" />
 
 ---
 
